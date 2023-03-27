@@ -8,7 +8,7 @@ from hardware_connector import *
 # AIO_PATH="vutranhoang1411/feeds/"
 AIO_FEED_IDs = ["cambien1","cambien2"] #can get from env file
 AIO_USERNAME = "vutranhoang1411"
-AIO_KEY = "aio_QWTb30HEwgJ0zcvt0O3odvAVMw6g"
+AIO_KEY = "aio_OgLn11vrHJ8w4qVGEfvrnJgPtxFm"
 
 
 client = MQTTClient(AIO_USERNAME,AIO_KEY)
@@ -18,8 +18,6 @@ def on_connect(client):
     for feed in AIO_FEED_IDs:
         client.subscribe(feed)
     
-        
-
 def subscribe(client , userdata , mid , granted_qos):
     print("Subscribe thanh cong ...")
 
@@ -28,19 +26,15 @@ def disconnected(client):
     sys.exit (1)
 
 def message(client , feed_id , payload):
-    #do somethign with the dât
+    #do somethign with the data
     print("Nhan du lieu: " + payload + " from feed: "+feed_id)
-def on_publish(client,mid):
-    print("On publish event with mid"+str(mid))
+
 client.on_connect = on_connect
 client.on_disconnect = disconnected
 client.on_message = message
 client.on_subscribe = subscribe
-client.on_publish=on_publish
 client.connect()
 client.loop_background()
 
 while True:
     readSerial(client)
-
-    

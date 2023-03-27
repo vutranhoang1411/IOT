@@ -19,8 +19,10 @@ import serial.tools.list_ports
 #         port = ports[i]
 #         strPort = str(port)
 #         print(strPort)
+wanted_id=0
 ser = serial.Serial(port="/dev/pts/3", baudrate=115200)
 mess = ""
+
 def processData(client,data):
     #decode the data
     data = data.replace("!", "")
@@ -29,16 +31,21 @@ def processData(client,data):
     # split[0]: data node id
     # split[1]: topic identifier
     # split[2]: payload
-    print(splitData)
-
+    received_id=int(splitData[0])
+    global wanted_id
+    if received_id==wanted_id:
+        wanted_id=1-wanted_id
+        publishData(client,splitData[1],splitData[2])
+    sendSerial(f'!ACK:{wanted_id}')
     #publish to topics
-    if splitData[1] == "1":
-        publishData(client,"cambien1",splitData[2],0)
-    elif splitData[1]=="2":
-        publishData(client,"cambien2", splitData[2],0)
+
         
-def publishData(client,topic:str,data:str,qos):
-    client.publish(topic,data,qos)
+def publishData(client,dev_id:str,data:str):
+    if dev_id == "1":
+        client.publish("cambien1",data)
+    elif dev_id=="2":
+        client.publish("cambien2",data)
+
     
 def readSerial(client):
     bytesToRead = ser.inWaiting()
