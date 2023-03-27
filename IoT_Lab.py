@@ -7,8 +7,8 @@ from hardware_connector import *
 
 # AIO_PATH="vutranhoang1411/feeds/"
 AIO_FEED_IDs = ["cambien1","cambien2"] #can get from env file
-AIO_USERNAME = "vutranhoang1411"
-AIO_KEY = "aio_OgLn11vrHJ8w4qVGEfvrnJgPtxFm"
+AIO_USERNAME = ""
+AIO_KEY = ""
 
 
 client = MQTTClient(AIO_USERNAME,AIO_KEY)
