@@ -3,3 +3,4 @@ keras*
 *.bash
 __pycache__
 employee
+*.env

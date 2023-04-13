@@ -6,8 +6,8 @@ import threading
 import detect_image
 #######set up adafruit server
 AIO_FEED_IDs = ["cambien1","cambien2","cambien3","nutnhan1"] #can get from env file
-AIO_USERNAME = "vutranhoang1411"
-AIO_KEY = "aio_JyWz99z2Ln5c80KUXCVuqIBjRhnq"
+AIO_USERNAME = ""
+AIO_KEY = ""
 
 client = MQTTClient(AIO_USERNAME,AIO_KEY)
 
