@@ -2,14 +2,12 @@ import sys
 from Adafruit_IO import MQTTClient
 from time import sleep
 from hardware_connector import *
-# from random import randint
-# # from detect_image import *
-
-# AIO_PATH="vutranhoang1411/feeds/"
-AIO_FEED_IDs = ["cambien1","cambien2"] #can get from env file
-AIO_USERNAME = ""
-AIO_KEY = ""
-
+import threading
+import detect_image
+#######set up adafruit server
+AIO_FEED_IDs = ["cambien1","cambien2","cambien3","nutnhan1"] #can get from env file
+AIO_USERNAME = "vutranhoang1411"
+AIO_KEY = "aio_JyWz99z2Ln5c80KUXCVuqIBjRhnq"
 
 client = MQTTClient(AIO_USERNAME,AIO_KEY)
 
@@ -26,8 +24,12 @@ def disconnected(client):
     sys.exit (1)
 
 def message(client , feed_id , payload):
-    #do somethign with the data
-    print("Nhan du lieu: " + payload + " from feed: "+feed_id)
+
+    if feed_id=="nutnhan1":
+        if payload=="0":
+            sendSerial("!BOFF#")
+        elif payload=="1":
+            sendSerial("!BON#")
 
 client.on_connect = on_connect
 client.on_disconnect = disconnected
@@ -35,6 +37,15 @@ client.on_message = message
 client.on_subscribe = subscribe
 client.connect()
 client.loop_background()
+sleep(5)
 
-while True:
-    readSerial(client)
+########## read serial
+def ReadSerial():
+    while True:
+        readSerial(client)
+
+threading.Thread(target=ReadSerial).start()
+
+##### detect img
+AI_Cam=detect_image.AICam("./employee",client)
+AI_Cam.StartRecord()

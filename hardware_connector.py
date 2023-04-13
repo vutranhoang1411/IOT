@@ -1,50 +1,50 @@
+from time import sleep
 import serial.tools.list_ports
-# def getPort():
-#     ports = serial.tools.list_ports.comports()
-#     N = len(ports)
-#     commPort = "None"
-#     for i in range(0, N):
-#         port = ports[i]
-#         strPort = str(port)
-#         if "USB Serial Device" in strPort:
-#             splitPort = strPort.split(" ")
-#             commPort = (splitPort[0])
-#     return commPort
 
-# def printPort():
-#     ports = serial.tools.list_ports.comports()
-#     N = len(ports)
-#     commPort = "None"
-#     for i in range(0, N):
-#         port = ports[i]
-#         strPort = str(port)
-#         print(strPort)
-wanted_id=0
-ser = serial.Serial(port="/dev/pts/3", baudrate=115200)
+ser = serial.Serial(port="/dev/pts/4", baudrate=115200)
 mess = ""
-
-def processData(client,data):
-    #decode the data
+val={"temp":"0","humi":"0","lux":"0"}
+def preProcessData(data:str)->str:
+    start=-1
+    for c in range(len(data)):
+        if data[c]=='!':
+            start=c
+    data=data[start:]
     data = data.replace("!", "")
     data = data.replace("#", "")
-    splitData = data.split(":")
-    # split[0]: data node id
-    # split[1]: topic identifier
-    # split[2]: payload
-    received_id=int(splitData[0])
-    global wanted_id
-    if received_id==wanted_id:
-        wanted_id=1-wanted_id
-        publishData(client,splitData[1],splitData[2])
-    sendSerial(f'!ACK:{wanted_id}')
+    return data
+def processData(client,data:str):
+    #decode the data
+    data=preProcessData(data)
+    # !temp:<number>,humi:<number>,lux:<number>#
+    deviceDatas=data.split(",")
+    
+    if len(deviceDatas)<3:
+        return
+    
+    newPacket=False
+    for devData in deviceDatas:
+        devName=devData.split(":")[0]
+        devPayload=devData.split(":")[1]
+        if devPayload!=val[devName]:
+            newPacket=True
+            val[devName]=devPayload
+            publishData(client,devName,devPayload)
+    sendSerial("!ACK#")
+    if newPacket:
+        sleep(5)
+        
+    
     #publish to topics
 
         
-def publishData(client,dev_id:str,data:str):
-    if dev_id == "1":
-        client.publish("cambien1",data)
-    elif dev_id=="2":
-        client.publish("cambien2",data)
+def publishData(client,devName:str,devPayload:str):
+    if devName == "temp":
+        client.publish("cambien1",devPayload)
+    elif devName=="humi":
+        client.publish("cambien2",devPayload)
+    elif devName=="lux":
+        client.publish("cambien3",devPayload)
 
     
 def readSerial(client):
@@ -55,6 +55,7 @@ def readSerial(client):
         while ("#" in mess) and ("!" in mess):
             start = mess.find("!")
             end = mess.find("#")
+
             processData(client,mess[start:end + 1])
             if (end == len(mess)):
                 mess = ""
@@ -66,7 +67,6 @@ def readSerial(client):
 def sendSerial(data):
     ser.write(str(data).encode("utf-8"))
 
-serial_connect=False
 
 
 # if __name__=="__main__":

@@ -1,51 +1,98 @@
-from keras.models import load_model  # TensorFlow is required for Keras to work
-import cv2  # Install opencv-python
+import face_recognition
+import cv2
 import numpy as np
+from os import listdir
+import simple_lock
+import threading
+from time import sleep
+def UnlockLock(lock):
+    sleep(10)
+    lock.Unlock()
+class AICam:
+    def __init__(self,employee_folder,client):
 
-# Disable scientific notation for clarity
-np.set_printoptions(suppress=True)
+        self.known_face_encodings=[]
+        self.known_face_names=[]
+        self.exist=[]
+        self.video_capture=cv2.VideoCapture(0)
 
-# Load the model
-model = load_model("keras_model.h5", compile=False)
+        img_files=listdir(employee_folder)
+        for img_file in img_files:
+        #get img name
+            name=img_file.split(".")[0]
+            self.known_face_names.append(name)
 
-# Load the labels
-class_names = open("labels.txt", "r").readlines()
+            #get encode
+            img=face_recognition.load_image_file("./employee/"+img_file)
+            encode=face_recognition.face_encodings(img)[0]
+            self.known_face_encodings.append(encode)
+            self.exist.append(False)
+            
+            self.client=client
+    
+    def StartRecord(self):
+        lock=simple_lock.Lock()
+        process_this_frame=True
+        while True:
+            ret, frame = self.video_capture.read()
+            if process_this_frame:
+                small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+                # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+                rgb_small_frame = cv2.cvtColor(small_frame,cv2.COLOR_BGR2RGB)
+                # Find all the faces and face encodings in the current frame of video
+                face_locations = face_recognition.face_locations(rgb_small_frame)
+                face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-# CAMERA can be 0 or 1 based on default camera of your computer
+                face_names = []
+                for face_encoding in face_encodings:
+                    # See if the face is a match for the known face(s)
+                    matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
+                    name = "Unknown"
 
+                    # # If a match was found in known_face_encodings, just use the first one.
+                    # if True in matches:
+                    #     first_match_index = matches.index(True)
+                    #     name = known_face_names[first_match_index]
 
-# while True:
-#     # Grab the webcamera's image.
-#     ret, image = camera.read()
+                    # Or instead, use the known face with the smallest distance to the new face
+                    face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
+                    best_match_index = np.argmin(face_distances)
+                    if matches[best_match_index]:
+                        name = self.known_face_names[best_match_index]
+                        if not self.exist[best_match_index]:
+                            self.client.publish("ai-log",f'Employee {name} go to work')
+                            self.exist[best_match_index]=True
 
-#     # Resize the raw image into (224-height,224-width) pixels
-#     image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
+                        if lock.Locked==False:
+                            lock.Lock()
+                            threading.Thread(target=UnlockLock,args=(lock,)).start()
+                            self.client.publish("nutnhan1","1")
+                        
+                            
+                    face_names.append(name)
 
-#     # Show the image in a window
-#     cv2.imshow("Webcam Image", image)
+            process_this_frame = not process_this_frame
+            for (top, right, bottom, left), name in zip(face_locations, face_names):
+                # Scale back up face locations since the frame we detected in was scaled to 1/4 size
+                top *= 4
+                right *= 4
+                bottom *= 4
+                left *= 4
 
-#     # Make the image a numpy array and reshape it to the models input shape.
-#     image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
+                # Draw a box around the face
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
-#     # Normalize the image array
-#     image = (image / 127.5) - 1
+                # Draw a label with a name below the face
+                cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
+                font = cv2.FONT_HERSHEY_DUPLEX
+                cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-#     # Predicts the model
-#     prediction = model.predict(image)
-#     index = np.argmax(prediction)
-#     class_name = class_names[index]
-#     confidence_score = prediction[0][index]
+            # Display the resulting image
+            cv2.imshow('Video', frame)
 
-#     # Print prediction and confidence score
-#     print("Class:", class_name[2:], end="")
-#     print("Confidence Score:", str(np.round(confidence_score * 100))[:-2], "%")
+            # Hit 'q' on the keyboard to quit!
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-#     # Listen to the keyboard for presses.
-#     keyboard_input = cv2.waitKey(1)
-
-#     # 27 is the ASCII for the esc key on your keyboard.
-#     if keyboard_input == 27:
-#         break
-
-# camera.release()
-# cv2.destroyAllWindows()
+        self.video_capture.release()
+        cv2.destroyAllWindows()
