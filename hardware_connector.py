@@ -1,7 +1,7 @@
 from time import sleep
 import serial.tools.list_ports
 
-ser = serial.Serial(port="/dev/pts/4", baudrate=115200)
+ser = serial.Serial(port="/dev/pts/6", baudrate=115200)
 mess = ""
 val={"temp":"0","humi":"0","lux":"0"}
 def preProcessData(data:str)->str:
@@ -13,6 +13,7 @@ def preProcessData(data:str)->str:
     data = data.replace("!", "")
     data = data.replace("#", "")
     return data
+
 def processData(client,data:str):
     #decode the data
     data=preProcessData(data)
@@ -32,7 +33,7 @@ def processData(client,data:str):
             publishData(client,devName,devPayload)
     sendSerial("!ACK#")
     if newPacket:
-        sleep(5)
+        sleep(30)
         
     
     #publish to topics
@@ -40,11 +41,11 @@ def processData(client,data:str):
         
 def publishData(client,devName:str,devPayload:str):
     if devName == "temp":
-        client.publish("cambien1",devPayload)
+        client.publish("iot-hk222.temperature",devPayload)
     elif devName=="humi":
-        client.publish("cambien2",devPayload)
+        client.publish("iot-hk222.humidity",devPayload)
     elif devName=="lux":
-        client.publish("cambien3",devPayload)
+        client.publish("iot-hk222.brightness",devPayload)
 
     
 def readSerial(client):

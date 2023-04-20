@@ -5,8 +5,9 @@ from os import listdir
 import simple_lock
 import threading
 from time import sleep
+import base64
 def UnlockLock(lock):
-    sleep(10)
+    sleep(30)
     lock.Unlock()
 class AICam:
     def __init__(self,employee_folder,client):
@@ -29,7 +30,7 @@ class AICam:
             self.exist.append(False)
             
             self.client=client
-    
+
     def StartRecord(self):
         lock=simple_lock.Lock()
         process_this_frame=True
@@ -42,7 +43,6 @@ class AICam:
                 # Find all the faces and face encodings in the current frame of video
                 face_locations = face_recognition.face_locations(rgb_small_frame)
                 face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
                 face_names = []
                 for face_encoding in face_encodings:
                     # See if the face is a match for the known face(s)
@@ -57,16 +57,22 @@ class AICam:
                     # Or instead, use the known face with the smallest distance to the new face
                     face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
                     best_match_index = np.argmin(face_distances)
-                    if matches[best_match_index]:
+                    if matches[best_match_index]: #detect a employee
                         name = self.known_face_names[best_match_index]
                         if not self.exist[best_match_index]:
-                            self.client.publish("ai-log",f'Employee {name} go to work')
+                            self.client.publish("iot-hk222.ai",f'{name} go to work')
+                            img_bytes=cv2.imencode('.jpg',small_frame)[1].tobytes()
+                            data=base64.b64encode(img_bytes)
+                            self.client.publish("iot-hk222.image-recognize",data)
                             self.exist[best_match_index]=True
 
                         if lock.Locked==False:
                             lock.Lock()
                             threading.Thread(target=UnlockLock,args=(lock,)).start()
-                            self.client.publish("nutnhan1","1")
+                            self.client.publish("iot-hk222.pump","1")
+                            img_bytes=cv2.imencode('.jpg',small_frame)[1].tobytes()
+                            data=base64.b64encode(img_bytes)
+                            self.client.publish("iot-hk222.image-recognize",data)
                         
                             
                     face_names.append(name)

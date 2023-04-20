@@ -5,9 +5,12 @@ from hardware_connector import *
 import threading
 import detect_image
 #######set up adafruit server
-AIO_FEED_IDs = ["cambien1","cambien2","cambien3","nutnhan1"] #can get from env file
-AIO_USERNAME = ""
-AIO_KEY = ""
+AIO_FEED_IDs = ["iot-hk222.pump"] #can get from env file
+# AIO_USERNAME = "vutranhoang1411"
+# AIO_KEY = "aio_fVka33U5AthCsw0KlHzeRqQO0uAE"
+AIO_USERNAME = "vynguyen08122002"
+AIO_KEY = "aio_jTpa00iRWo7ACInoo8sMTJ1I7Pr8"
+
 
 client = MQTTClient(AIO_USERNAME,AIO_KEY)
 
@@ -25,11 +28,13 @@ def disconnected(client):
 
 def message(client , feed_id , payload):
 
-    if feed_id=="nutnhan1":
+    if feed_id=="iot-hk222.pump":
         if payload=="0":
             sendSerial("!BOFF#")
         elif payload=="1":
             sendSerial("!BON#")
+    else:
+        print(payload)
 
 client.on_connect = on_connect
 client.on_disconnect = disconnected
